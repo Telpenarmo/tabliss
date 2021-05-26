@@ -14,11 +14,13 @@
   },
   "dependencies": {
     "@sentry/browser": "^5.15.4",
+    "cdav-library": "github:nextcloud/cdav-library",
     "date-fns": "^2.11.1",
     "date-fns-tz": "^1.0.10",
     "feather-icons": "^4.26.0",
     "in-browser-language": "^1.0.3",
     "localforage": "^1.7.1",
+    "moment": "^2.29.1",
     "normalize.css": "^8.0.0",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
