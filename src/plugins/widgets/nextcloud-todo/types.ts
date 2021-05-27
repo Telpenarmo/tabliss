@@ -9,7 +9,6 @@ export type Todo = {
 export type State = Todo[];
 
 export type Data = {
-  items: Todo[];
   show: number;
   refreshInterval: number;
   userName: string;
@@ -26,7 +25,6 @@ export type CacheState = {
 export type Props = API<Data, CacheState>;
 
 export const defaultData: Data = {
-  items: [],
   show: 3,
   refreshInterval: 5,
   userName: "",
