@@ -58,7 +58,7 @@ const TodoSettings: FC<Props> = ({ data = defaultData, setData }) => (
       <input
         type="text"
         onChange={event =>
-          setData({ ...data, calendars: event.target.value.split(',').map(String.prototype.trim) })
+          setData({ ...data, calendars: event.target.value.split(',').map((v) => v.trim()) })
         }
         placeholder="Names of todos lists, separated by comma"
         value={data.calendars.join(', ')}
