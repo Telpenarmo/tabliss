@@ -29,7 +29,7 @@ export const widgetConfigs = [
   nextcloudTodo
 ];
 
-if (process.env.BUILD_TARGET === 'web') {
+if (process.env.BUILD_TARGET === "web") {
   widgetConfigs.push(js);
 }
 
