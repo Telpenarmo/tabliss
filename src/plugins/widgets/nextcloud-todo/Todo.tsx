@@ -1,9 +1,9 @@
 import React, { FC } from 'react';
 
 import { useToggle, useCachedEffect } from '../../../hooks';
-import { DownIcon, Icon, UpIcon, ExpandIcon } from '../../../views/shared';
+import { DownIcon, Icon, UpIcon } from '../../../views/shared';
 import TodoList from './TodoList';
-import { defaultData, Props } from './types';
+import { defaultData, Props, State } from './types';
 import { removeTodo, toggleTodo, updateTodo, Action } from './actions';
 import { getTodos } from './api';
 import { reducer } from './reducer';
@@ -25,11 +25,13 @@ const Todo: FC<Props> = ({ cache, data = defaultData, setCache, loader }) => {
     return null;
   }
 
+  const setItems = (items: State) => setCache({ items, timestamp: Date.now() - refreshInterval });
+
   const items = cache.items.filter(item => !item.completed || showCompleted);
   const show = !showMore ? data.show : undefined;
 
   function dispatch(f: (...args: any[]) => Action) {
-    return (...args: any[]) => { reducer(items, f(...args)); updateTodos(); }
+    return (...args: any[]) => { setItems(reducer(items, f(...args))) }
   }
 
   return (
