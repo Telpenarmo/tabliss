@@ -62,7 +62,7 @@ const TodoItem: FC<Props> = ({ item,
       <span
         ref={ref}
         contentEditable={true}
-        onBlur={event => onUpdate(event.currentTarget.innerText)}
+        onBlur={event => { const text = event.currentTarget.innerText; if (text !== item.contents) onUpdate(text) }}
       />
 
       <a
