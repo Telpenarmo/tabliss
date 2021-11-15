@@ -2,7 +2,7 @@
 import { API } from '../../types';
 import { CacheState, Data, Todo } from './types';
 
-import { convert, IcalObject } from './ical2json';
+import { convert, revert, IcalObject } from './ical2json';
 import DavClient, { Calendar, VObject } from 'cdav-library';
 import moment from 'moment';
 
@@ -98,13 +98,35 @@ async function FindRecent(calendar: Calendar, days: number): Promise<VObject[]> 
   return completed.concat(pending);
 }
 
-// this unfortunately disallows filtering cancelled tasks
-function vobj2Todo(vobj: VObject): Todo {
-  const task = (convert(vobj.data).VCALENDAR[0] as IcalObject).VTODO[0] as IcalObject;
+function makeTodo(vObj: VObject): Todo {
+  const task = (convert(vObj.data).VCALENDAR[0] as IcalObject).VTODO[0] as IcalObject;
   return {
     completed: task.COMPLETED !== undefined,
     contents: task.SUMMARY as string,
-    id: task.UID as string
+    id: task.UID as string,
+    complete: () => {
+      task.COMPLETED = moment.utc().format('YYYYMMDDTHHmmss');
+      const data = {} as IcalObject;
+      const calendar = {} as IcalObject;
+      calendar["VTODO"] = [task];
+      data["VCALENDAR"] = [calendar];
+      vObj.data = revert(data);
+
+      vObj.update()
+    },
+    edit: (contents: string) => {
+      if (task.SUMMARY == contents) return;
+
+      task.SUMMARY = contents;
+      const data = {} as IcalObject;
+      const calendar = {} as IcalObject;
+      calendar["VTODO"] = [task];
+      data["VCALENDAR"] = [calendar];
+      vObj.data = revert(data);
+
+      vObj.update()
+    },
+    remove: () => { vObj.delete(); }
   };
 }
 
@@ -132,7 +154,7 @@ export async function getTodos(data: Data, loader: API['loader']): Promise<Cache
   loader.push();
   const tasks = await Promise.all(tasksReders)
     .then((res) => res.flat())
-    .then((res) => res.map(vobj2Todo))
+    .then((res) => res.map(makeTodo))
     .finally(loader.pop);
 
   return {

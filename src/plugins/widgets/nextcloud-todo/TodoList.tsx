@@ -7,16 +7,16 @@ import './TodoList.sass';
 interface Props {
   items: State;
   show?: number;
-  // onToggle(id: string): void;
-  // onUpdate(id: string, contents: string): void;
-  // onRemove(id: string): void;
+  onToggle(id: string): void;
+  onUpdate(id: string, contents: string): void;
+  onRemove(id: string): void;
 }
 
 const TodoList: FC<Props> = ({
   items,
-  // onToggle,
-  // onUpdate,
-  // onRemove,
+  onToggle,
+  onUpdate,
+  onRemove,
   show = 0,
 }) => (
   <div className="TodoList">
@@ -24,9 +24,9 @@ const TodoList: FC<Props> = ({
       <TodoItem
         key={item.id}
         item={item}
-      // onToggle={() => onToggle(item.id)}
-      // onUpdate={contents => onUpdate(item.id, contents)}
-      // onDelete={() => onRemove(item.id)}
+        onToggle={() => onToggle(item.id)}
+        onUpdate={contents => onUpdate(item.id, contents)}
+        onDelete={() => onRemove(item.id)}
       />
     ))}
   </div>

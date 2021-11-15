@@ -1,6 +1,8 @@
 declare module 'cdav-library' {
   export class VObject {
     data: string;
+    update(): Promise<void>;
+    delete(): Promise<void>;
   }
   export class Calendar {
     calendarQuery(filter: any, prop?: any[], timezone?: string): Promise<VObject[]>;

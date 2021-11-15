@@ -4,7 +4,10 @@ export type Todo = {
   id: string;
   contents: string;
   completed: boolean;
-};
+  complete: () => void;
+  edit: (contents: string) => void;
+  remove: () => void;
+}
 
 export type State = Todo[];
 

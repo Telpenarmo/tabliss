@@ -1,41 +1,44 @@
 import React, { FC } from 'react';
 
-import { useSavedReducer, useToggle, useCachedEffect } from '../../../hooks';
+import { useToggle, useCachedEffect } from '../../../hooks';
 import { DownIcon, Icon, UpIcon, ExpandIcon } from '../../../views/shared';
-// import { removeTodo, toggleTodo, updateTodo } from './actions';
-// import { reducer } from './reducer';
 import TodoList from './TodoList';
-import { defaultData, Props, State } from './types';
+import { defaultData, Props } from './types';
+import { removeTodo, toggleTodo, updateTodo, Action } from './actions';
 import { getTodos } from './api';
+import { reducer } from './reducer';
 
 const Todo: FC<Props> = ({ cache, data = defaultData, setCache, loader }) => {
   const [showCompleted, toggleShowCompleted] = useToggle();
   const [showMore, toggleShowMore] = useToggle();
   const refreshInterval = data.refreshInterval * 60 * 1000; // min -> ms
 
+  function updateTodos() { getTodos(data, loader).then(setCache) };
+
   useCachedEffect(
-    () => { getTodos(data, loader).then(setCache) },
+    updateTodos,
     cache ? cache.timestamp + refreshInterval : 0,
-    []
+    [data.userName, data.password, data.serverURL, data.dueTimeRange]
   );
 
   if (!cache) {
     return null;
   }
 
-  // const setItems = (todos: State) => setCache({ items: todos, timestamp: Date.now() });
-  // const dispatch = useSavedReducer(reducer, data.items, setItems);
-
   const items = cache.items.filter(item => !item.completed || showCompleted);
   const show = !showMore ? data.show : undefined;
+
+  function dispatch(f: (...args: any[]) => Action) {
+    return (...args: any[]) => { reducer(items, f(...args)); updateTodos(); }
+  }
 
   return (
     <div className="Todo">
       <TodoList
         items={items}
-        // onToggle={(...args) => dispatch(toggleTodo(...args))}
-        // onUpdate={(...args) => dispatch(updateTodo(...args))}
-        // onRemove={(...args) => dispatch(removeTodo(...args))}
+        onToggle={dispatch(toggleTodo)}
+        onUpdate={dispatch(updateTodo)}
+        onRemove={dispatch(removeTodo)}
         show={show}
       />
 

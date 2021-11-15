@@ -7,13 +7,13 @@ import './TodoItem.sass';
 
 interface Props {
   item: State[number];
-  // onToggle(): void;
-  // onUpdate(contents: string): void;
-  // onDelete(): void;
+  onToggle(): void;
+  onUpdate(contents: string): void;
+  onDelete(): void;
 }
 
 const TodoItem: FC<Props> = ({ item,
-  // onDelete, onUpdate, onToggle
+  onDelete, onUpdate, onToggle
 }) => {
   const ref = useRef<HTMLSpanElement>(null);
 
@@ -61,17 +61,17 @@ const TodoItem: FC<Props> = ({ item,
     <div className="TodoItem">
       <span
         ref={ref}
-        contentEditable={false}
-      // onBlur={event => onUpdate(event.currentTarget.innerText)}
+        contentEditable={true}
+        onBlur={event => onUpdate(event.currentTarget.innerText)}
       />
 
       <a
-        // onMouseDown={onToggle}
+        onMouseDown={onToggle}
         className="complete">
         <Icon name={item.completed ? 'check-circle' : 'circle'} />
-        {/* </a> */}
-        {/* <a onMouseDown={onDelete} className="delete"> */}
-        {/* <RemoveIcon /> */}
+      </a>
+      <a onMouseDown={onDelete} className="delete">
+        <RemoveIcon />
       </a>
     </div>
   );
