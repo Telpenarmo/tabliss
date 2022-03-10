@@ -25,6 +25,7 @@ function xhrProvider(userName: string, password: string): XMLHttpRequest {
 async function FindRecent(calendar: Calendar, days: number): Promise<VObject[]> {
   let limit = moment.utc().add(days, 'days').format('YYYYMMDDTHHmmss');
   let last24h = moment.utc().add(-1, 'days').format('YYYYMMDDTHHmmss');
+  let now = moment.utc().format('YYYYMMDDTHHmmss');
   type Query = { name: string[]; attributes: string[][]; children: Query[] };
   const queryBase: Query = {
     name: [IETF_CALDAV, 'comp-filter'],
@@ -83,6 +84,19 @@ async function FindRecent(calendar: Calendar, days: number): Promise<VObject[]> 
               name: [IETF_CALDAV, 'time-range'],
               attributes: [
                 ['end', limit]
+              ],
+              children: [],
+            }]
+          },
+          {
+            name: [IETF_CALDAV, 'comp-filter'],
+            attributes: [
+              ['name', 'DTSTART'],
+            ],
+            children: [{
+              name: [IETF_CALDAV, 'time-range'],
+              attributes: [
+                ['end', now]
               ],
               children: [],
             }]
