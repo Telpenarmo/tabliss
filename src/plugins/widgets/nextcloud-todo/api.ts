@@ -3,7 +3,7 @@ import { API } from '../../types';
 import { CacheState, Data, Todo } from './types';
 
 import { convert, revert, IcalObject } from './ical2json';
-import DavClient, { Calendar, VObject } from 'cdav-library';
+import DavClient, { Calendar, VObject } from '@nextcloud/cdav-library';
 import moment from 'moment';
 
 const IETF_CALDAV = 'urn:ietf:params:xml:ns:caldav';

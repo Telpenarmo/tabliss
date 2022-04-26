@@ -1,4 +1,4 @@
-declare module 'cdav-library' {
+declare module '@nextcloud/cdav-library' {
   export class VObject {
     data: string;
     update(): Promise<void>;
