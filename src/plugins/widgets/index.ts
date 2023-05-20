@@ -14,6 +14,7 @@ import time from './time';
 import todo from './todo';
 import weather from './weather';
 import workHours from "./workHours";
+import joke from "./joke";
 import nextcloudTodo from './nextcloud-todo';
 
 export const widgetConfigs = [
@@ -32,6 +33,7 @@ export const widgetConfigs = [
   todo,
   weather,
   workHours,
+  joke,
   nextcloudTodo
 ];
 

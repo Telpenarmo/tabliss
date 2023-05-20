@@ -33,7 +33,9 @@ const System: React.FC = () => {
           value={locale}
           onChange={(event) => setLocale(event.target.value)}
         >
-          <option value="ca-ES" title="Catalan">
+          <option value="ar" title="Arabic">
+            العربية
+          </option><option value="ca-ES" title="Catalan">
             Català
           </option>
           <option value="cs" title="Czech">
@@ -66,6 +68,9 @@ const System: React.FC = () => {
           <option value="fr" title="French">
             Français
           </option>
+          <option value="he" title="Hebrew">
+            עברית
+          </option>
           <option value="ga" title="Gaeilge">
             Gaeilge
           </option>
@@ -95,6 +100,9 @@ const System: React.FC = () => {
           </option>
           <option value="ko" title="Korean">
             한국어
+          </option>
+          <option value="kp" title="North Korean">
+            조선말
           </option>
           <option value="lb" title="Luxembourgish">
             Lëtzebuergesch
