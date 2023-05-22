@@ -3,117 +3,61 @@ import { API } from '../../types';
 import { CacheState, Data, Todo } from './types';
 
 import { convert, revert, IcalObject } from './ical2json';
-import DavClient, { Calendar, VObject } from '@nextcloud/cdav-library';
+import { DAVNamespaceShort, calendarQuery } from 'tsdav';
 import moment from 'moment';
 
-const IETF_CALDAV = 'urn:ietf:params:xml:ns:caldav';
-
-function xhrProvider(userName: string, password: string): XMLHttpRequest {
-  var xhr = new XMLHttpRequest();
-  var oldOpen = xhr.open
-
-  // override open() method to add headers
-  xhr.open = function () {
-    type openParams = [string, string, boolean, string | null | undefined, string | null | undefined]
-    var result = oldOpen.apply(this, arguments as unknown as openParams);
-    xhr.setRequestHeader('Authorization', 'Basic ' + btoa(userName + ':' + password));
-    return result
+interface DAVResponse {
+  href: string,
+  propstat: {
+    prop: {
+      getetag: string,
+      calendarData: string
+    }
   }
-  return xhr
+};
+
+interface ResponsesBatch {
+  raw: {
+    multistatus: {
+      response: DAVResponse[]
+    }
+  }
+};
+
+async function FindRecent(serverURL: string, username: string, password: string, calendar: string): Promise<any[]> {
+  const queryBase = {
+    'comp-filter': {
+      _attributes: {
+        name: 'VCALENDAR',
+      },
+      _children: {
+        'comp-filter': {
+          _attributes: {
+            name: 'VTODO',
+          },
+        }
+      },
+    },
+  };
+
+  const resp = await calendarQuery({
+    url: `${serverURL}/calendars/${username}/${calendar.toLowerCase()}`,
+    filters: [queryBase],
+    props: {
+      [`${DAVNamespaceShort.DAV}:getetag`]: {},
+      [`${DAVNamespaceShort.CALDAV}:calendar-data`]: {},
+    },
+    depth: '1',
+    headers: {
+      authorization: 'Basic ' + btoa(username + ':' + password),
+    }
+  });
+
+  return resp;
 }
 
-async function FindRecent(calendar: Calendar, days: number): Promise<VObject[]> {
-  let limit = moment.utc().add(days, 'days').format('YYYYMMDDTHHmmss');
-  let last24h = moment.utc().add(-1, 'days').format('YYYYMMDDTHHmmss');
-  let now = moment.utc().format('YYYYMMDDTHHmmss');
-  type Query = { name: string[]; attributes: string[][]; children: Query[] };
-  const queryBase: Query = {
-    name: [IETF_CALDAV, 'comp-filter'],
-    attributes: [
-      ['name', 'VCALENDAR'],
-    ],
-    children: [{
-      name: [IETF_CALDAV, 'comp-filter'],
-      attributes: [
-        ['name', 'VTODO'],
-      ],
-      children: [],
-    }],
-  };
-
-  const queryCompleted: Query = {
-    ...queryBase, children: [{
-      ...queryBase.children[0], children: [
-        {
-          name: [IETF_CALDAV, 'prop-filter'],
-          attributes: [
-            ['name', 'COMPLETED'],
-          ],
-          children: [{
-            name: [IETF_CALDAV, 'time-range'],
-            attributes: [
-              ['start', last24h]
-            ],
-            children: [],
-          }]
-        }]
-    }]
-  };
-
-  const queryPending: Query = {
-    ...queryBase, children: [{
-      ...queryBase.children[0], children:
-        [
-          {
-            name: [IETF_CALDAV, 'prop-filter'],
-            attributes: [
-              ['name', 'COMPLETED'],
-            ],
-            children: [{
-              name: [IETF_CALDAV, 'is-not-defined'],
-              attributes: [],
-              children: [],
-            }]
-          },
-          {
-            name: [IETF_CALDAV, 'comp-filter'],
-            attributes: [
-              ['name', 'DUE'],
-            ],
-            children: [{
-              name: [IETF_CALDAV, 'time-range'],
-              attributes: [
-                ['end', limit]
-              ],
-              children: [],
-            }]
-          },
-          {
-            name: [IETF_CALDAV, 'comp-filter'],
-            attributes: [
-              ['name', 'DTSTART'],
-            ],
-            children: [{
-              name: [IETF_CALDAV, 'time-range'],
-              attributes: [
-                ['end', now]
-              ],
-              children: [],
-            }]
-          }
-        ]
-    }]
-  };
-
-  const [completed, pending] = await Promise.all([
-    calendar.calendarQuery([queryCompleted]),
-    calendar.calendarQuery([queryPending]),
-  ]);
-  return completed.concat(pending);
-}
-
-function makeTodo(vObj: VObject): Todo {
-  const task = (convert(vObj.data).VCALENDAR[0] as IcalObject).VTODO[0] as IcalObject;
+function makeTodo(vObj: DAVResponse): Todo {
+  const task = (convert(vObj.propstat.prop.calendarData).VCALENDAR[0] as IcalObject).VTODO[0] as IcalObject;
   return {
     completed: task.COMPLETED !== undefined,
     contents: task.SUMMARY as string,
@@ -124,9 +68,9 @@ function makeTodo(vObj: VObject): Todo {
       const calendar = {} as IcalObject;
       calendar["VTODO"] = [task];
       data["VCALENDAR"] = [calendar];
-      vObj.data = revert(data);
+      vObj.propstat.prop.calendarData = revert(data);
 
-      vObj.update()
+      // vObj.update()
     },
     edit: (contents: string) => {
       if (task.SUMMARY == contents) return;
@@ -136,11 +80,11 @@ function makeTodo(vObj: VObject): Todo {
       const calendar = {} as IcalObject;
       calendar["VTODO"] = [task];
       data["VCALENDAR"] = [calendar];
-      vObj.data = revert(data);
+      vObj.propstat.prop.calendarData = revert(data);
 
-      vObj.update()
+      // vObj.update()
     },
-    remove: () => { vObj.delete(); }
+    remove: () => { }
   };
 }
 
@@ -152,22 +96,18 @@ export async function getTodos(data: Data, loader: API['loader']): Promise<Cache
     }
   }
 
-  const client = new DavClient({ rootUrl: data.serverURL }, () => xhrProvider(data.userName, data.password));
   loader.push();
-  await client.connect({ enableCalDAV: true });
 
-  const calendars = await client.calendarHomes[0].findAllCalDAVCollections().finally(loader.pop);
-  const tasksReders: Promise<VObject[]>[] = [];
-  for (let i = 0; i < calendars.length; i++) {
-    const cal = calendars[i];
-    if (cal.displayname !== undefined && (data.calendars.length === 0 || data.calendars.includes(cal.displayname))) {
-      tasksReders.push(FindRecent(cal, data.dueTimeRange));
-    }
+  const tasksReders: Promise<ResponsesBatch[]>[] = [];
+
+  for (const cal of data.calendars) {
+    tasksReders.push(FindRecent(data.serverURL, data.userName, data.password, cal));
   }
 
   loader.push();
   const tasks = await Promise.all(tasksReders)
     .then((res) => res.flat())
+    .then((res) => res.flatMap(r => r.raw.multistatus.response))
     .then((res) => res.map(makeTodo))
     .finally(loader.pop);
 
