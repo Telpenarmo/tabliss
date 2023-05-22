@@ -3,61 +3,70 @@ import { API } from '../../types';
 import { CacheState, Data, Todo } from './types';
 
 import { convert, revert, IcalObject } from './ical2json';
-import { DAVNamespaceShort, calendarQuery } from 'tsdav';
+import { DAVNamespaceShort, DAVResponse, calendarQuery } from 'tsdav';
 import moment from 'moment';
 
-interface DAVResponse {
-  href: string,
-  propstat: {
-    prop: {
-      getetag: string,
-      calendarData: string
-    }
-  }
-};
+async function download(
+  serverURL: string,
+  username: string,
+  password: string,
+  calendar: string,
+  days: number,
+): Promise<DAVResponse[]> {
 
-interface ResponsesBatch {
-  raw: {
-    multistatus: {
-      response: DAVResponse[]
-    }
-  }
-};
+  let limit = moment.utc().add(days, 'days').format('YYYYMMDDTHHmmss');
 
-async function FindRecent(serverURL: string, username: string, password: string, calendar: string): Promise<any[]> {
-  const queryBase = {
+  const pendingFilter = {
     'comp-filter': {
       _attributes: {
         name: 'VCALENDAR',
       },
-      _children: {
-        'comp-filter': {
+      'comp-filter': {
+        _attributes: {
+          name: 'VTODO',
+        },
+        'prop-filter': {
           _attributes: {
-            name: 'VTODO',
+            name: 'COMPLETED',
           },
-        }
+          'is-not-defined': {}
+        },
+        'comp-filter': [
+          {
+            _attributes: {
+              name: 'DUE',
+            },
+            'time-range': {
+              _attributes: {
+                end: limit
+              },
+            }
+          },
+        ],
       },
     },
   };
 
-  const resp = await calendarQuery({
-    url: `${serverURL}/calendars/${username}/${calendar.toLowerCase()}`,
-    filters: [queryBase],
-    props: {
-      [`${DAVNamespaceShort.DAV}:getetag`]: {},
-      [`${DAVNamespaceShort.CALDAV}:calendar-data`]: {},
-    },
-    depth: '1',
-    headers: {
-      authorization: 'Basic ' + btoa(username + ':' + password),
-    }
-  });
+  const query = (filter: any) => {
+    return calendarQuery({
+      url: `${serverURL}/calendars/${username}/${calendar.toLowerCase()}`,
+      filters: [filter],
+      props: {
+        [`${DAVNamespaceShort.DAV}:getetag`]: {},
+        [`${DAVNamespaceShort.CALDAV}:calendar-data`]: {},
+      },
+      depth: '1',
+      headers: {
+        authorization: 'Basic ' + btoa(username + ':' + password),
+      }
+    });
+  };
 
-  return resp;
+  return query(pendingFilter);
 }
 
-function makeTodo(vObj: DAVResponse): Todo {
-  const task = (convert(vObj.propstat.prop.calendarData).VCALENDAR[0] as IcalObject).VTODO[0] as IcalObject;
+function makeTodo(props: { calendarData: string }): Todo {
+  const task = (convert(props.calendarData).VCALENDAR[0] as IcalObject).VTODO[0] as IcalObject;
   return {
     completed: task.COMPLETED !== undefined,
     contents: task.SUMMARY as string,
@@ -68,7 +77,7 @@ function makeTodo(vObj: DAVResponse): Todo {
       const calendar = {} as IcalObject;
       calendar["VTODO"] = [task];
       data["VCALENDAR"] = [calendar];
-      vObj.propstat.prop.calendarData = revert(data);
+      props.calendarData = revert(data);
 
       // vObj.update()
     },
@@ -80,7 +89,7 @@ function makeTodo(vObj: DAVResponse): Todo {
       const calendar = {} as IcalObject;
       calendar["VTODO"] = [task];
       data["VCALENDAR"] = [calendar];
-      vObj.propstat.prop.calendarData = revert(data);
+      props.calendarData = revert(data);
 
       // vObj.update()
     },
@@ -98,16 +107,16 @@ export async function getTodos(data: Data, loader: API['loader']): Promise<Cache
 
   loader.push();
 
-  const tasksReders: Promise<ResponsesBatch[]>[] = [];
+  const tasksReders: Promise<DAVResponse[]>[] = [];
 
   for (const cal of data.calendars) {
-    tasksReders.push(FindRecent(data.serverURL, data.userName, data.password, cal));
+    tasksReders.push(download(data.serverURL, data.userName, data.password, cal, data.dueTimeRange));
   }
 
   loader.push();
   const tasks = await Promise.all(tasksReders)
     .then((res) => res.flat())
-    .then((res) => res.flatMap(r => r.raw.multistatus.response))
+    .then((res) => res.flatMap(r => r.props!))
     .then((res) => res.map(makeTodo))
     .finally(loader.pop);
 
