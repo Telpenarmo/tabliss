@@ -3,7 +3,7 @@ import { API } from '../../types';
 import { CacheState, Data, Todo } from './types';
 
 import { convert, revert, IcalObject } from './ical2json';
-import { DAVNamespaceShort, DAVResponse, calendarQuery } from 'tsdav';
+import { DAVNamespaceShort, DAVResponse, calendarQuery, deleteObject, updateObject } from 'tsdav';
 import moment from 'moment';
 
 async function download(
@@ -65,35 +65,57 @@ async function download(
   return query(pendingFilter);
 }
 
-function makeTodo(props: { calendarData: string }): Todo {
-  const task = (convert(props.calendarData).VCALENDAR[0] as IcalObject).VTODO[0] as IcalObject;
+function makeTodo(response: DAVResponse, serverURL: string, username: string, password: string): Todo {
+  const calData = convert(response.props!.calendarData);
+  const task = (calData.VCALENDAR[0] as IcalObject).VTODO[0] as IcalObject;
+
+  const serverHost = new URL(serverURL).origin;
+
+  const update = (task: IcalObject) => {
+    const data = {} as IcalObject;
+    const calendar = {} as IcalObject;
+    calendar["VTODO"] = [task];
+    data["VCALENDAR"] = [calendar];
+    response.props!.calendarData = revert(data);
+
+    return updateObject({
+      url: `${serverHost}/${response.href!}`,
+      data: revert(data),
+      etag: response.props!.getetag,
+      headers: {
+        'content-type': 'text/calendar; charset=utf-8',
+        authorization: 'Basic ' + btoa(username + ':' + password),
+      }
+    });
+  }
+
   return {
     completed: task.COMPLETED !== undefined,
     contents: task.SUMMARY as string,
     id: task.UID as string,
     complete: () => {
+      task.STATUS = 'COMPLETED';
       task.COMPLETED = moment.utc().format('YYYYMMDDTHHmmss');
-      const data = {} as IcalObject;
-      const calendar = {} as IcalObject;
-      calendar["VTODO"] = [task];
-      data["VCALENDAR"] = [calendar];
-      props.calendarData = revert(data);
+      task['PERCENT-COMPLETE'] = '100';
 
-      // vObj.update()
+      update(task);
     },
     edit: (contents: string) => {
       if (task.SUMMARY == contents) return;
 
       task.SUMMARY = contents;
-      const data = {} as IcalObject;
-      const calendar = {} as IcalObject;
-      calendar["VTODO"] = [task];
-      data["VCALENDAR"] = [calendar];
-      props.calendarData = revert(data);
 
-      // vObj.update()
+      update(task);
     },
-    remove: () => { }
+    remove: () => {
+      deleteObject({
+        url: `${serverHost}/${response.href!}`,
+        etag: response.props!.getetag,
+        headers: {
+          authorization: 'Basic ' + btoa(username + ':' + password),
+        }
+      });
+    }
   };
 }
 
@@ -116,8 +138,7 @@ export async function getTodos(data: Data, loader: API['loader']): Promise<Cache
   loader.push();
   const tasks = await Promise.all(tasksReders)
     .then((res) => res.flat())
-    .then((res) => res.flatMap(r => r.props!))
-    .then((res) => res.map(makeTodo))
+    .then((res) => res.map(r => makeTodo(r, data.serverURL, data.userName, data.password)))
     .finally(loader.pop);
 
   return {
