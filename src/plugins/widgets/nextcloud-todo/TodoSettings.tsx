@@ -1,28 +1,29 @@
 import React, { FC } from 'react';
 
 import { Props, defaultData } from './types';
+import { DebounceInput } from '../../shared/DebounceInput';
 
 const TodoSettings: FC<Props> = ({ data = defaultData, setData }) => (
   <div className="SearchSettings">
     <label>
       Tasks to show
-      <input
+      <DebounceInput
         type="number"
         min="0"
-        onChange={event =>
-          setData({ ...data, show: Number(event.target.value) })
+        onChange={show =>
+          setData({ ...data, show: Number(show) })
         }
         placeholder="Number of todo items to show"
-        value={data.show}
+        value={data.show.toString()}
       />
     </label>
 
     <label>
       Server URL
-      <input
+      <DebounceInput
         type="url"
-        onChange={event =>
-          setData({ ...data, serverURL: event.target.value })
+        onChange={serverURL =>
+          setData({ ...data, serverURL })
         }
         placeholder="Your CalDav's server URL"
         value={data.serverURL}
@@ -31,10 +32,10 @@ const TodoSettings: FC<Props> = ({ data = defaultData, setData }) => (
 
     <label>
       Username
-      <input
+      <DebounceInput
         type="text"
-        onChange={event =>
-          setData({ ...data, userName: event.target.value })
+        onChange={userName =>
+          setData({ ...data, userName })
         }
         placeholder="The username"
         value={data.userName}
@@ -43,10 +44,10 @@ const TodoSettings: FC<Props> = ({ data = defaultData, setData }) => (
 
     <label>
       Password
-      <input
+      <DebounceInput
         type="password"
-        onChange={event =>
-          setData({ ...data, password: event.target.value })
+        onChange={password =>
+          setData({ ...data, password })
         }
         placeholder="Your password"
         value={data.password}
@@ -55,10 +56,10 @@ const TodoSettings: FC<Props> = ({ data = defaultData, setData }) => (
 
     <label>
       Calendars (optional)
-      <input
+      <DebounceInput
         type="text"
-        onChange={event =>
-          setData({ ...data, calendars: event.target.value.split(',').map((v) => v.trim()) })
+        onChange={calendars =>
+          setData({ ...data, calendars: calendars.split(',').map((v) => v.trim()) })
         }
         placeholder="Names of todos lists, separated by comma"
         value={data.calendars.join(', ')}
@@ -67,27 +68,27 @@ const TodoSettings: FC<Props> = ({ data = defaultData, setData }) => (
 
     <label>
       Due time range (days)
-      <input
+      <DebounceInput
         type="number"
-        onChange={event =>
-          setData({ ...data, dueTimeRange: Number(event.target.value) })
+        onChange={dueTimeRange =>
+          setData({ ...data, dueTimeRange: Number(dueTimeRange) })
         }
         placeholder="Number of days ahaed the todos will show"
-        value={data.dueTimeRange}
+        value={data.dueTimeRange.toString()}
       />
     </label>
 
     <label>
       Refresh interval (minutes)
-      <input
+      <DebounceInput
         type="number"
         min={1}
         max={60}
-        onChange={event =>
-          setData({ ...data, refreshInterval: Number(event.target.value) })
+        onChange={refreshInterval =>
+          setData({ ...data, refreshInterval: Number(refreshInterval) })
         }
         placeholder="How often todos list should be updated"
-        value={data.refreshInterval}
+        value={data.refreshInterval.toString()}
       />
     </label>
   </div>
