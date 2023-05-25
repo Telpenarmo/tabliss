@@ -3,13 +3,12 @@ import { API } from '../../types';
 import { CacheState, Data, Todo } from './types';
 
 import { convert, revert, IcalObject } from './ical2json';
-import { DAVNamespaceShort, DAVResponse, calendarQuery, deleteObject, updateObject } from 'tsdav';
+import { DAVNamespaceShort, DAVResponse, calendarQuery, deleteObject, getBasicAuthHeaders, updateObject } from 'tsdav';
 import moment from 'moment';
 
 async function download(
   calendarUrl: string,
-  username: string,
-  password: string,
+  authHeaders: Record<string, string>,
   days: number,
 ): Promise<DAVResponse[]> {
 
@@ -26,9 +25,7 @@ async function download(
         [`${DAVNamespaceShort.CALDAV}:calendar-data`]: {},
       },
       depth: '1',
-      headers: {
-        authorization: 'Basic ' + btoa(username + ':' + password),
-      }
+      headers: authHeaders
     });
   };
 
@@ -70,7 +67,7 @@ function makePendingFilter(limit: string) {
 
 function todosFactory(
   makeResourceUrl: (resp: DAVResponse) => string,
-  username: string, password: string
+  authHeaders: Record<string, string>,
 ): (response: DAVResponse) => Todo {
   return (response: DAVResponse) => {
     const calData = convert(response.props!.calendarData);
@@ -90,8 +87,8 @@ function todosFactory(
         data: revert(data),
         etag,
         headers: {
+          ...authHeaders,
           'content-type': 'text/calendar; charset=utf-8',
-          authorization: 'Basic ' + btoa(username + ':' + password),
         }
       });
     };
@@ -119,9 +116,7 @@ function todosFactory(
         deleteObject({
           url,
           etag,
-          headers: {
-            authorization: 'Basic ' + btoa(username + ':' + password),
-          }
+          headers: authHeaders
         });
       }
     };
@@ -129,7 +124,8 @@ function todosFactory(
 }
 
 export async function getTodos(data: Data, loader: API['loader']): Promise<CacheState> {
-  if (data.serverURL === '' || data.userName === '' || data.password === '') {
+  const authHeaders = getAuthHeaders(data);
+  if (!authHeaders.authorization) {
     return {
       items: [],
       timestamp: Date.now(),
@@ -144,11 +140,11 @@ export async function getTodos(data: Data, loader: API['loader']): Promise<Cache
 
   for (const calId of data.calendars) {
     const calendarUrl = `${data.serverURL}/calendars/${data.userName}/${calId.toLowerCase()}`;
-    const promise = download(calendarUrl, data.userName, data.password, data.dueTimeRange);
+    const promise = download(calendarUrl, authHeaders, data.dueTimeRange);
     tasksDownloads.push(promise);
   }
 
-  const makeTodo = todosFactory(makeResourceUrl, data.userName, data.password);
+  const makeTodo = todosFactory(makeResourceUrl, authHeaders);
 
   loader.push();
   const tasks = await Promise.all(tasksDownloads)
@@ -160,4 +156,11 @@ export async function getTodos(data: Data, loader: API['loader']): Promise<Cache
     items: tasks,
     timestamp: Date.now(),
   };
+}
+
+export function getAuthHeaders(credentials: {userName: string, password: string}) {
+  return getBasicAuthHeaders({
+    username: credentials.userName,
+    password: credentials.password
+  });
 }
