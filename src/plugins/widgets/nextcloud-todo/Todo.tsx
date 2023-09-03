@@ -18,7 +18,7 @@ const Todo: FC<Props> = ({ cache, data = defaultData, setCache, loader }) => {
   useCachedEffect(
     updateTodos,
     cache ? cache.timestamp + refreshInterval : 0,
-    [data.userName, data.password, data.serverURL, data.dueTimeRange]
+    [data.dueTimeRange, data.calendars]
   );
 
   if (!cache) {

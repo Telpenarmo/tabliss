@@ -1,9 +1,9 @@
-
 import { API } from '../../types';
-import { CacheState, Data, Todo } from './types';
+import { Account, CacheState, Calendar, Data, LoggedInAccount, Todo, loggedIn } from './types';
 
 import { convert, revert, IcalObject } from './ical2json';
 import { DAVNamespaceShort, DAVResponse, calendarQuery, deleteObject, getBasicAuthHeaders, updateObject } from 'tsdav';
+import tsdav from 'tsdav';
 import moment from 'moment';
 
 async function download(
@@ -93,7 +93,6 @@ function todosFactory(
       });
     };
 
-
     return {
       completed: task.COMPLETED !== undefined,
       contents: task.SUMMARY as string,
@@ -124,33 +123,37 @@ function todosFactory(
 }
 
 export async function getTodos(data: Data, loader: API['loader']): Promise<CacheState> {
-  const authHeaders = getAuthHeaders(data);
-  if (!authHeaders.authorization) {
+  if (!loggedIn(data.account)) {
     return {
       items: [],
       timestamp: Date.now(),
     }
   }
+  console.log("Starting todos downloading");
+
+  const authHeaders = getAuthHeaders(data.account.credentials);
 
   loader.push();
 
-  const makeResourceUrl = (resp: DAVResponse) => new URL(resp.href!, data.serverURL).href;
+  const makeResourceUrl = (resp: DAVResponse) => new URL(resp.href!, data.account.serverUrl).href;
 
   const tasksDownloads: Promise<DAVResponse[]>[] = [];
 
-  for (const calId of data.calendars) {
-    const calendarUrl = `${data.serverURL}/calendars/${data.userName}/${calId.toLowerCase()}`;
-    const promise = download(calendarUrl, authHeaders, data.dueTimeRange);
+  for (const cal of data.calendars) {
+    const promise = download(cal.url, authHeaders, data.dueTimeRange);
     tasksDownloads.push(promise);
   }
 
   const makeTodo = todosFactory(makeResourceUrl, authHeaders);
 
   loader.push();
+
   const tasks = await Promise.all(tasksDownloads)
     .then((results) => results.flat())
     .then((responses) => responses.map(makeTodo))
     .finally(loader.pop);
+
+  console.log("Todos downloaded")
 
   return {
     items: tasks,
@@ -158,9 +161,54 @@ export async function getTodos(data: Data, loader: API['loader']): Promise<Cache
   };
 }
 
-export function getAuthHeaders(credentials: {userName: string, password: string}) {
-  return getBasicAuthHeaders({
-    username: credentials.userName,
-    password: credentials.password
-  });
+export function getAuthHeaders(credentials: { username: string, password: string }) {
+  return getBasicAuthHeaders(credentials);
+}
+
+export async function logIn(account: Account, loader: API['loader']): Promise<LoggedInAccount> {
+  console.log(`Logging in to CalDAV service at ${account.serverUrl}`);
+
+  loader.push();
+
+  const fullAccount = await tsdav.createAccount({
+    account: { ...account, accountType: 'caldav' },
+    headers: getAuthHeaders(account.credentials)
+  })
+    .finally(loader.pop);
+
+  console.log("Successfully logged in")
+
+  return {
+    ...account,
+    rootUrl: fullAccount.rootUrl!,
+    principalUrl: fullAccount.principalUrl!,
+    homeUrl: fullAccount.homeUrl!
+  };
+}
+
+export async function fetchCalendars(account: LoggedInAccount, loader: API['loader']): Promise<Calendar[]> {
+  if (!loggedIn(account)) return [];
+
+  loader.push();
+
+  const calendars = await tsdav.fetchCalendars({
+    account: { ...account, accountType: 'caldav' },
+    headers: getAuthHeaders(account.credentials),
+    props: {
+      [`${tsdav.DAVNamespaceShort.CALDAV}:calendar-description`]: {},
+      [`${tsdav.DAVNamespaceShort.CALDAV}:calendar-timezone`]: {},
+      [`${tsdav.DAVNamespaceShort.DAV}:displayname`]: {},
+      [`${tsdav.DAVNamespaceShort.CALDAV_APPLE}:calendar-color`]: {},
+      [`${tsdav.DAVNamespaceShort.CALENDAR_SERVER}:getctag`]: {},
+      [`${tsdav.DAVNamespaceShort.DAV}:resourcetype`]: {},
+      [`${tsdav.DAVNamespaceShort.CALDAV}:supported-calendar-component-set`]: {},
+      [`${tsdav.DAVNamespaceShort.DAV}:sync-token`]: {},
+      [`${tsdav.DAVNamespaceShort.DAV}:current-user-privilege-set`]: {},
+    }
+  })
+    .finally(loader.pop);
+
+  return calendars
+    .filter(c => c.components?.includes('VTODO'))
+    .filter(c => c.displayName !== undefined) as Calendar[];
 }
