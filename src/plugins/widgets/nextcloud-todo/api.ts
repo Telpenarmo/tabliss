@@ -4,15 +4,20 @@ import { Account, CacheState, Calendar, Data, LoggedInAccount, Todo, loggedIn } 
 import { convert, revert, IcalObject } from './ical2json';
 import { DAVNamespaceShort, DAVResponse, calendarQuery, deleteObject, getBasicAuthHeaders, updateObject } from 'tsdav';
 import tsdav from 'tsdav';
-import moment from 'moment';
+import dateFns from 'date-fns';
+import date_fns_tz from 'date-fns-tz';
 
+function formatDate(date: Date) {
+  return date_fns_tz.formatInTimeZone(date, "UTC", "yyyyMMdd'T'HHmmss");
+}
+ 
 async function download(
   calendarUrl: string,
   authHeaders: Record<string, string>,
   days: number,
 ): Promise<DAVResponse[]> {
 
-  let limit = moment.utc().add(days, 'days').format('YYYYMMDDTHHmmss');
+  let limit = formatDate(dateFns.addDays(new Date(), days));
 
   const pendingFilter = makePendingFilter(limit);
 
@@ -99,7 +104,7 @@ function todosFactory(
       id: task.UID as string,
       complete: () => {
         task.STATUS = 'COMPLETED';
-        task.COMPLETED = moment.utc().format('YYYYMMDDTHHmmss');
+        task.COMPLETED = formatDate(new Date());
         task['PERCENT-COMPLETE'] = '100';
 
         update(task);
