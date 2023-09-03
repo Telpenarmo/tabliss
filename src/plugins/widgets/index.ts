@@ -15,7 +15,7 @@ import todo from './todo';
 import weather from './weather';
 import workHours from "./workHours";
 import joke from "./joke";
-import nextcloudTodo from './nextcloud-todo';
+import caldavTodo from './caldav-todo';
 
 export const widgetConfigs = [
   css,
@@ -34,7 +34,7 @@ export const widgetConfigs = [
   weather,
   workHours,
   joke,
-  nextcloudTodo
+  caldavTodo
 ];
 
 if (BUILD_TARGET === "web") {
