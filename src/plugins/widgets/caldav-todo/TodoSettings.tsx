@@ -1,8 +1,15 @@
-import React, { FC, useEffect, useState } from 'react';
+import React, { FC, useEffect, useState } from "react";
 
-import { Calendar, Props, credentialsComplete, defaultData, loggedOff, loggedIn } from './types';
-import { DebounceInput } from '../../shared/DebounceInput';
-import { fetchCalendars, logIn } from './api';
+import {
+  Calendar,
+  Props,
+  credentialsComplete,
+  defaultData,
+  loggedOff,
+  loggedIn,
+} from "./types";
+import { DebounceInput } from "../../shared/DebounceInput";
+import { fetchCalendars, logIn } from "./api";
 
 const TodoSettings: FC<Props> = ({ data = defaultData, setData, loader }) => {
   const [allCalendars, setAllCalendars] = useState<Calendar[]>([]);
@@ -11,23 +18,25 @@ const TodoSettings: FC<Props> = ({ data = defaultData, setData, loader }) => {
   useEffect(() => {
     if (firstRun.current) return;
     console.log("Clearing calendars");
-    setData({...data, calendars: [], account: loggedOff(data.account) });
+    setData({ ...data, calendars: [], account: loggedOff(data.account) });
 
     if (!credentialsComplete(data.account)) return;
 
-    logIn(data.account, loader)
-      .then(account => setData({ ...data, account }));
-    
+    logIn(data.account, loader).then((account) =>
+      setData({ ...data, account }),
+    );
   }, [data.account.credentials, data.account.serverUrl]);
 
   useEffect(() => {
-    console.log("Fetching calendars")
+    console.log("Fetching calendars");
     const accountLoggedIn = loggedIn(data.account);
     if (accountLoggedIn)
       fetchCalendars(accountLoggedIn, loader).then(setAllCalendars);
   }, [data.account]);
 
-  useEffect(() => { firstRun.current = false; },[]);
+  useEffect(() => {
+    firstRun.current = false;
+  }, []);
 
   return (
     <div className="SearchSettings">
@@ -36,9 +45,7 @@ const TodoSettings: FC<Props> = ({ data = defaultData, setData, loader }) => {
         <DebounceInput
           type="number"
           min="0"
-          onChange={show =>
-            setData({ ...data, show: Number(show) })
-          }
+          onChange={(show) => setData({ ...data, show: Number(show) })}
           placeholder="Number of todo items to show"
           value={data.show.toString()}
         />
@@ -48,14 +55,13 @@ const TodoSettings: FC<Props> = ({ data = defaultData, setData, loader }) => {
         Server URL
         <DebounceInput
           type="url"
-          onChange={serverUrl =>
+          onChange={(serverUrl) =>
             setData({
               ...data,
-              account:
-              {
+              account: {
                 ...data.account,
-                serverUrl
-              }
+                serverUrl,
+              },
             })
           }
           placeholder="Your CalDav's server URL"
@@ -67,16 +73,16 @@ const TodoSettings: FC<Props> = ({ data = defaultData, setData, loader }) => {
         Username
         <DebounceInput
           type="text"
-          onChange={username =>
+          onChange={(username) =>
             setData({
               ...data,
               account: {
                 ...data.account,
                 credentials: {
                   ...data.account.credentials,
-                  username
-                }
-              }
+                  username,
+                },
+              },
             })
           }
           placeholder="The username"
@@ -88,16 +94,17 @@ const TodoSettings: FC<Props> = ({ data = defaultData, setData, loader }) => {
         Password
         <DebounceInput
           type="password"
-          onChange={password =>
-            setData({ ...data,
+          onChange={(password) =>
+            setData({
+              ...data,
               account: {
                 ...data.account,
-                credentials:
-                {
+                credentials: {
                   ...data.account.credentials,
-                  password }
-                }
-              })
+                  password,
+                },
+              },
+            })
           }
           placeholder="Your password"
           value={data.account.credentials.password}
@@ -108,14 +115,14 @@ const TodoSettings: FC<Props> = ({ data = defaultData, setData, loader }) => {
         <label key={calendar.url}>
           <input
             type="checkbox"
-            checked={data.calendars.some(c => c.url === calendar.url)}
+            checked={data.calendars.some((c) => c.url === calendar.url)}
             onChange={(e) => {
               const calendars = e.target.checked
                 ? [...data.calendars, calendar]
-                : data.calendars.filter(c => c.url !== calendar.url);
-              setData({...data, calendars});
+                : data.calendars.filter((c) => c.url !== calendar.url);
+              setData({ ...data, calendars });
             }}
-            />
+          />
           {calendar.displayName}
         </label>
       ))}
@@ -124,7 +131,7 @@ const TodoSettings: FC<Props> = ({ data = defaultData, setData, loader }) => {
         Due time range (days)
         <DebounceInput
           type="number"
-          onChange={dueTimeRange =>
+          onChange={(dueTimeRange) =>
             setData({ ...data, dueTimeRange: Number(dueTimeRange) })
           }
           placeholder="Number of days ahaed the todos will show"
@@ -138,7 +145,7 @@ const TodoSettings: FC<Props> = ({ data = defaultData, setData, loader }) => {
           type="number"
           min={1}
           max={60}
-          onChange={refreshInterval =>
+          onChange={(refreshInterval) =>
             setData({ ...data, refreshInterval: Number(refreshInterval) })
           }
           placeholder="How often todos list should be updated"

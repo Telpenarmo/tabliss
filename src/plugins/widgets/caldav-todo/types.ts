@@ -1,4 +1,4 @@
-import { API } from '../../types';
+import { API } from "../../types";
 
 export type Todo = {
   id: string;
@@ -7,42 +7,46 @@ export type Todo = {
   complete: () => void;
   edit: (contents: string) => void;
   remove: () => void;
-}
+};
 
 export type Calendar = {
   displayName: string;
   url: string;
-}
+};
 
 type Credentials = {
   username: string;
   password: string;
-}
+};
 
 export type Account = {
   serverUrl: string;
   credentials: Credentials;
-}
+};
 
 export type LoggedInAccount = Account & {
   rootUrl: string;
   principalUrl: string;
   homeUrl: string;
-}
+};
 
 export function credentialsComplete(account: Account): boolean {
-  return !!(account.credentials.username && account.credentials.password && account.serverUrl);
+  return !!(
+    account.credentials.username &&
+    account.credentials.password &&
+    account.serverUrl
+  );
 }
 
 export function loggedIn(account: Account | LoggedInAccount) {
-  return 'rootUrl' in account ? account : undefined;
+  return "rootUrl" in account ? account : undefined;
 }
 
 export function loggedOff(account: Account): Account {
   return {
     serverUrl: account.serverUrl,
-    credentials: account.credentials
-  }
+    credentials: account.credentials,
+  };
 }
 
 export type State = Todo[];
@@ -56,9 +60,9 @@ export type Data = {
 };
 
 export type CacheState = {
-  items: Todo[],
-  timestamp: number,
-}
+  items: Todo[];
+  timestamp: number;
+};
 export type Props = API<Data, CacheState>;
 
 export const defaultData: Data = {
@@ -71,6 +75,6 @@ export const defaultData: Data = {
       username: "",
       password: "",
     },
-    serverUrl: ""
-  }
+    serverUrl: "",
+  },
 };

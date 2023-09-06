@@ -1,9 +1,9 @@
-import React, { FC, useLayoutEffect, useRef } from 'react';
+import React, { FC, useLayoutEffect, useRef } from "react";
 
-import { useKeyPress } from '../../../hooks';
-import { Icon, RemoveIcon } from '../../../views/shared';
-import { State } from './types';
-import './TodoItem.sass';
+import { useKeyPress } from "../../../hooks";
+import { Icon, RemoveIcon } from "../../../views/shared";
+import { State } from "./types";
+import "./TodoItem.sass";
 
 interface Props {
   item: State[number];
@@ -12,23 +12,21 @@ interface Props {
   onDelete(): void;
 }
 
-const TodoItem: FC<Props> = ({ item,
-  onDelete, onUpdate, onToggle
-}) => {
+const TodoItem: FC<Props> = ({ item, onDelete, onUpdate, onToggle }) => {
   const ref = useRef<HTMLSpanElement>(null);
 
   useLayoutEffect(() => {
     if (ref.current) {
       ref.current.innerText = item.contents;
 
-      if (item.contents === '') {
+      if (item.contents === "") {
         ref.current.focus();
       }
     }
   }, [item.contents]);
 
   useKeyPress(
-    event => {
+    (event) => {
       if (event.target === ref.current) {
         event.preventDefault();
 
@@ -37,12 +35,12 @@ const TodoItem: FC<Props> = ({ item,
         }
       }
     },
-    ['Enter'],
+    ["Enter"],
     false,
   );
 
   useKeyPress(
-    event => {
+    (event) => {
       if (event.target === ref.current) {
         event.preventDefault();
 
@@ -53,7 +51,7 @@ const TodoItem: FC<Props> = ({ item,
         }
       }
     },
-    ['Escape'],
+    ["Escape"],
     false,
   );
 
@@ -62,13 +60,14 @@ const TodoItem: FC<Props> = ({ item,
       <span
         ref={ref}
         contentEditable={true}
-        onBlur={event => { const text = event.currentTarget.innerText; if (text !== item.contents) onUpdate(text) }}
+        onBlur={(event) => {
+          const text = event.currentTarget.innerText;
+          if (text !== item.contents) onUpdate(text);
+        }}
       />
 
-      <a
-        onMouseDown={onToggle}
-        className="complete">
-        <Icon name={item.completed ? 'check-circle' : 'circle'} />
+      <a onMouseDown={onToggle} className="complete">
+        <Icon name={item.completed ? "check-circle" : "circle"} />
       </a>
       <a onMouseDown={onDelete} className="delete">
         <RemoveIcon />
